@@ -1,5 +1,4 @@
 var fs = require('fs')
-
 var path = require('path')
 
 var glob = require('glob')
@@ -20,7 +19,8 @@ readJson.extraSet = [
   readme,
   mans,
   bins,
-  githead
+  githead,
+  fillTypes
 ]
 
 var typoWarned = {}
@@ -435,6 +435,33 @@ function final (file, data, log, strict, cb) {
     typoWarned[pId] = true
     cb(null, data)
   })
+}
+
+function fillTypes (file, data, cb) {
+  var index = data.main ? data.main : 'index.js'
+  if (data.exports && typeof data.exports === 'string') index = data.exports
+  if (data.exports && data.exports['.']) index = data.exports['.']
+
+  function switchExt (file, ext) {
+    var extless = path.join(path.dirname(file), path.basename(file, path.extname(file)))
+    return './' + extless + '.' + ext
+  }
+
+  var dts = switchExt(index, 'd.ts')
+  var dtsPath = path.join(path.dirname(file), dts)
+  var hasDTSFields = 'types' in data || 'typings' in data
+  if (!hasDTSFields && fs.existsSync(dtsPath)) {
+    data.types = dts
+  }
+
+  var flow = switchExt(index, 'flow.js')
+  var flowPath = path.join(path.dirname(file), flow)
+  var hasFlowField = 'flow' in data
+  if (!hasFlowField && fs.existsSync(flowPath)) {
+    data.flow = flow
+  }
+
+  cb(null, data)
 }
 
 function makePackageId (data) {
